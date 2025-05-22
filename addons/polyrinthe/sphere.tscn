@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://rtydrgneftwp"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_majj8"]
+resource_local_to_scene = true
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_er8ec"]
+resource_local_to_scene = true
+material = SubResource("StandardMaterial3D_majj8")
+radius = 2.0
+height = 4.0
+
+[node name="sphere" type="Node3D"]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+mesh = SubResource("CapsuleMesh_er8ec")
