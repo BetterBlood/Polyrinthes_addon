@@ -10,11 +10,11 @@ const CubeGraph := preload("res://addons/polyrinthe/cubeGraph.gd")
 @export_group("Generation Properties")
 @export var algo:= GENERATION_ALGORITHME.DFS_3D_ALT_2
 ## for example: (0, 0, 0)
-@export var coord_first: Marker3D
+@export var coord_first: Marker3D = Marker3D.new()
 ## for example: (1, 0, 0)
-@export var coord_right: Marker3D
+@export var coord_right: Marker3D = Marker3D.new()
 ## for example: (0, 1, 0)
-@export var coord_up: Marker3D
+@export var coord_up: Marker3D = Marker3D.new()
 
 @export_group("Design Properties")
 ## optionnal, a material can be set to walls (need to be set before display)
@@ -68,12 +68,30 @@ enum GENERATION_ALGORITHME {
 }
 
 func _ready(): # (backward, forward, left, right, down, up)
-	pass
+	coord_first.position = Vector3()
+	coord_right.position = Vector3(1, 0, 0)
+	coord_up.position = Vector3(0, 1, 0)
+	
+	if Engine.is_editor_hint():
+		_editor_ready.call_deferred()
+		return
+	else:
+		_editor_ready()
+
+func _editor_ready() -> void:
+	add_child(coord_first, true)
+	coord_first.owner = self if self.owner == null else self.owner
+	
+	add_child(coord_right, true)
+	coord_right.owner = self if self.owner == null else self.owner
+	
+	add_child(coord_up, true)
+	coord_up.owner = self if self.owner == null else self.owner
 
 func _process(_delta):
 	pass
 
-func _generate_seeds(chars:String = _characters, length:int = 10) -> void :
+func _generate_seeds(chars:String = _characters, length:int = 10) -> void:
 	seed_human = ""
 	var chars_len = len(chars)
 	for i in range(length):
@@ -146,6 +164,7 @@ func generate(sizeP:int, new_seed:String = "", default_tags: Array = [-1, -1]) -
 	print("cubeGraph.getNbrRoom(): ", cubeGraph.getNbrRoom(), ", depth: ", cubeGraph.get_deepest())
 	
 	cubeGraph.setColorFromDepth()
+	add_child(cubeGraph)
 
 func get_seed() -> String:
 	return seed_human

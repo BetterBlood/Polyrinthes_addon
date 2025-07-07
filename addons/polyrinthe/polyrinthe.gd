@@ -1,6 +1,7 @@
 @tool
 extends EditorPlugin
 
+class_name PolyrinthePlugin
 
 func _enter_tree():
 	# Initialization of the plugin goes here.
