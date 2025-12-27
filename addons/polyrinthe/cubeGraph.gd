@@ -400,7 +400,7 @@ func computeColor(depth: float, maxDepth: float, triColor: bool = true) -> Vecto
 	return Vector3(redRatio, greenRatio, blueRatio).normalized()
 
 func instantiate_pyramid(center_pos: Vector3, distFromCenter: Vector3, color: Vector3):
-	var base_distFromCenter: int = 1
+	var base_distFromCenter: float = distFromCenter.length()/10.
 	var vertices = PackedVector3Array()
 	var point1:Vector3
 	var point2:Vector3

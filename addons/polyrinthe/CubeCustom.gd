@@ -38,10 +38,12 @@ func _init(center: Vector3, arr: Array[int], depth: float, deepest: float,
 			var sphereStart = sphere.instantiate()
 			sphereStart.get_child(0).mesh.material.albedo_color = Color(1, 1, 1, 1)
 			add_child(sphereStart)
+			sphereStart.scale = scale * _spec_scale
 		elif depth == deepest:
 			var sphereEnd = sphere.instantiate()
 			sphereEnd.get_child(0).mesh.material.albedo_color = Color(0, 0, 0, 1)
 			add_child(sphereEnd)
+			sphereEnd.scale = scale * _spec_scale
 
 func instantiate_cube(arr: Array[int], depth: float, size: float):
 	# (backward, forward, left, right, down, up)
@@ -66,6 +68,10 @@ func instatiate_wall_free(pos: Vector3, rot: Vector3) -> void:
 	
 	wallTmp.set_position(pos)
 	wallTmp.set_rotation(rot)
+	
+	wallTmp.get_child(0).lod_bias = 0.5
+	wallTmp.get_child(0).visibility_range_end = 161
+	
 	wallTmp.scale = Vector3(_spec_scale, _spec_scale, _spec_scale)
 	
 	var mesh = wallTmp.get_children()[0] as MeshInstance3D;

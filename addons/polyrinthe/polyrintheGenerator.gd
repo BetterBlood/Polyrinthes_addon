@@ -8,6 +8,7 @@ const CubeGraph := preload("res://addons/polyrinthe/cubeGraph.gd")
 
 @export_category("Polyrinthe")
 @export_group("Generation Properties")
+var begin_id: int = 0
 @export var algo:= GENERATION_ALGORITHME.DFS_3D_ALT_2
 ## for example: (0, 0, 0)
 @export var coord_first: Marker3D = Marker3D.new()
@@ -52,7 +53,7 @@ var gapBetweenCubeCenter = (CubeCustom.distFromCenter * 2 + 0.1) * \
 var rng = RandomNumberGenerator.new()
 var seed_human:String
 var seed_hashed:int
-var _characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+static var _characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
 enum GENERATION_ALGORITHME { 
 	DFS_3D, 
@@ -66,6 +67,10 @@ enum GENERATION_ALGORITHME {
 	DFS_LBL_ALT_5, 
 	DFS_LBL_ALT_6 
 }
+
+var deepest_id: int = 0
+var reduce_wall: bool = true
+
 
 func _ready(): # (backward, forward, left, right, down, up)
 	coord_first.position = Vector3()
@@ -91,17 +96,25 @@ func _editor_ready() -> void:
 func _process(_delta):
 	pass
 
-func _generate_seeds(chars:String = _characters, length:int = 10) -> void:
-	seed_human = ""
+static func static_generate_seed(chars:String = _characters, length:int = 10) -> String:
+	var new_seed = ""
 	var chars_len = len(chars)
 	for i in range(length):
-		seed_human += chars[randi()% chars_len]
+		new_seed += chars[randi()% chars_len]
 	
+	return new_seed
+
+func _generate_seeds(chars:String = _characters, length:int = 10) -> void:
+	#seed_human = ""
+	#var chars_len = len(chars)
+	#for i in range(length):
+		#seed_human += chars[randi()% chars_len]
+	seed_human = static_generate_seed(chars, length)
 	seed_hashed = hash(seed_human)
 	print(seed_human, ": ", seed_hashed)
 
 func generate(sizeP:int, new_seed:String = "", default_tags: Array = [-1, -1]) -> void:
-	if len(new_seed) == 0:
+	if new_seed.is_empty():
 		_generate_seeds()
 	else:
 		seed_human = new_seed
@@ -109,53 +122,54 @@ func generate(sizeP:int, new_seed:String = "", default_tags: Array = [-1, -1]) -
 	
 	rng.seed = seed_hashed
 	
-	cubeGraph = CubeGraph.new(sizeP, wallV, outWallV, 6, default_tags)
+	size = sizeP
+	
+	cubeGraph = CubeGraph.new(size, wallV, outWallV, 6, default_tags)
 	
 	# only for normal generation : odd size, middle: cubeGraph.getNbrRoom()/2 
-	var beginId = 0
 	
 	var time_start = Time.get_ticks_msec()
 	match algo:
 		GENERATION_ALGORITHME.DFS_3D:
-			createPath_deepWay(beginId)
+			createPath_deepWay(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_3D_ALT_1:
-			createPath_deepWay_alt_1(beginId)
+			createPath_deepWay_alt_1(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_3D_ALT_2:
-			createPath_deepWay_alt_2(beginId)
+			createPath_deepWay_alt_2(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_LBL:
-			createPath_deepWay_layer_by_layer(beginId)
+			createPath_deepWay_layer_by_layer(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_LBL_ALT_1:
-			createPath_deepWay_layer_by_layer_alt_1(beginId)
+			createPath_deepWay_layer_by_layer_alt_1(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_LBL_ALT_2:
-			createPath_deepWay_layer_by_layer_alt_2(beginId)
+			createPath_deepWay_layer_by_layer_alt_2(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_LBL_ALT_3:
-			createPath_deepWay_layer_by_layer_alt_3(beginId)
+			createPath_deepWay_layer_by_layer_alt_3(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_LBL_ALT_4:
-			createPath_deepWay_layer_by_layer_alt_4(beginId)
+			createPath_deepWay_layer_by_layer_alt_4(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_LBL_ALT_5:
-			createPath_deepWay_layer_by_layer_alt_5(beginId)
+			createPath_deepWay_layer_by_layer_alt_5(begin_id)
 			
 		GENERATION_ALGORITHME.DFS_LBL_ALT_6:
-			createPath_deepWay_layer_by_layer_alt_6(beginId)
+			createPath_deepWay_layer_by_layer_alt_6(begin_id)
 			
 		_:
 			push_warning("gen_algo provided not matched: please have a look at GENERATION_ALGORITHME enum")
-			createPath_deepWay_layer_by_layer_alt_6(beginId)
+			createPath_deepWay_layer_by_layer_alt_6(begin_id)
 	var time_end = Time.get_ticks_msec()
 	
 	print("createPath in " + str((time_end - time_start)/1000) + "s " + \
 		str((time_end - time_start)%1000) + "ms.")
 	
 	time_start = Time.get_ticks_msec()
-	deepensPath_wideWay(beginId) # recompute connections from given id, by depth
+	deepensPath_wideWay(begin_id) # recompute connections from given id, by depth
 	time_end = Time.get_ticks_msec()
 	
 	print("deepensPath in " + str((time_end - time_start)/1000) + "s " + \
@@ -230,7 +244,7 @@ func display() -> void:
 		
 		var cube = CubeCustom.new(
 			curr_pos, 
-			cubeGraph.getNeighborsConnection(i), 
+			_reduce_connection_for_generation(i, cubeGraph.getNeighborsConnection(i), cubeGraph.getNeighbors(i)) if reduce_wall else cubeGraph.getNeighborsConnection(i), 
 			cubeGraph.getColor(i), 
 			depthReached,
 			debug,
@@ -278,6 +292,17 @@ func _on_menu_generation(edgeSize) -> void:
 	clean()
 	generate(edgeSize)
 	display()
+
+# avoid double walls
+func _reduce_connection_for_generation(id: int, connected: Array[int], all: Array[int]) -> Array[int]:
+	var arr: Array[int] = []
+	for i in range(len(all)):
+		if connected[i] < 0 and all[i] > id: # if not connected but neighbourg higher id
+			arr.append(all[i])
+		else:
+			arr.append(connected[i])
+	
+	return arr
 
 func clean() -> void:
 	maze.clear()
@@ -844,7 +869,7 @@ func deepensPath_wideWay(beginId: int = 0):
 		cubeGraph.setVisited(i)
 	
 	var neighborsNext: Array[int]
-	
+	deepest_id = beginId
 	while(!neighbors.is_empty()) :
 		neighborsNext = neighbors.duplicate()
 		neighbors.clear()
@@ -855,6 +880,7 @@ func deepensPath_wideWay(beginId: int = 0):
 			for i in cubeGraph.getNeighborsConnectionNotVisited(currentNeighbor):
 				neighbors.append(i)
 				cubeGraph.setVisited(i)
+				deepest_id = i
 	
 	cubeGraph.setColorFromDepth()
 
@@ -883,7 +909,7 @@ func clean_tag_wide_way(begin_id: int = 0, tag_id: int = 0, max_depth: int = 5, 
 				neighbors.append(i)
 				cubeGraph.setVisited(i)
 
-func tag_spreads_wide_way(begin_id:int, tag_id:int, max_depth:int, values:Array) -> void:
+func tag_spreads_wide_way(begin_id:int, tag_id:int, max_depth:int, values:Array, cumulativ: bool = false) -> void:
 	if not cubeGraph.isInRange(begin_id):
 		push_error("begin_id out of range, aborted ! For current graph, should be lower than:", cubeGraph.getNbrRoom())
 		return
@@ -905,7 +931,7 @@ func tag_spreads_wide_way(begin_id:int, tag_id:int, max_depth:int, values:Array)
 	var neighbors: Array[int]
 	var depth: int = 0
 	neighbors = cubeGraph.getNeighborsConnectionNotVisited(begin_id)
-	cubeGraph.set_tag(begin_id, tag_id, values[depth])
+	cubeGraph.set_tag(begin_id, tag_id, values[depth] if not cumulativ else values[depth] + get_tag(begin_id, tag_id))
 	cubeGraph.setVisited(begin_id)
 	for i in neighbors:
 		cubeGraph.setVisited(i)
@@ -919,7 +945,7 @@ func tag_spreads_wide_way(begin_id:int, tag_id:int, max_depth:int, values:Array)
 		
 		while(!neighborsNext.is_empty()):
 			var currentNeighbor:int = neighborsNext.pop_back()
-			cubeGraph.set_tag(currentNeighbor, tag_id, values[depth])
+			cubeGraph.set_tag(currentNeighbor, tag_id, values[depth] if not cumulativ else values[depth] + get_tag(currentNeighbor, tag_id))
 			for i in cubeGraph.getNeighborsConnectionNotVisited(currentNeighbor):
 				neighbors.append(i)
 				cubeGraph.setVisited(i)
@@ -952,3 +978,11 @@ func instantiatePyramidConnection_allNeighbors(mazeUsed: Dictionary):
 						cubeGraph.computeColor(cubeGraph.getDepth(id), depthReached)
 					)
 				)
+
+
+static func is_id_on_first_floor(size:int, id: int) -> bool:
+	for i in range(size):
+		for j in range(size):
+			if i + j * size * size == id: return true
+	
+	return false
