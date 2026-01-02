@@ -1,2 +1,7 @@
 # Normalize EOL for all files that Git considers text files.
 * text=auto eol=lf
+
+# Remove files for downloads from godot asset Library
+/**         export-ignore
+/addons     -export-ignore
+/addons/**  -export-ignore
